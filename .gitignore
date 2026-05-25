@@ -1,23 +1,21 @@
-### AL ###
-#Template for AL projects for Dynamics 365 Business Central
-#launch.json folder
+# 系统缓存
+.DS_Store
+Thumbs.db
+
+# 编辑器
 .vscode/
-#Cache folder
-.alcache/
-#Symbols folder
-.alpackages/
-#Snapshots folder
-.snapshots/
-#Testing Output folder
-.output/
-#Extension App-file
-*.app
-#Rapid Application Development File
-rad.json
-#Translation Base-file
-*.g.xlf
-#License-files
-*.bclicense
-*.flf
-#Test results file
-TestResults.xml
+.idea/
+*.swp
+*.swo
+
+# 临时文件
+*.tmp
+*.log
+*.bak
+
+# 本地私有配置
+.env
+config.local
+
+# 图片缓存/大文件（按需）
+# 不忽略正常图片，只忽略临时截图缓存
