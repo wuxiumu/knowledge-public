@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Office-Topology Ops Center</title>
+    <style>
+        :root {
+            --bg-color: #0e1111;
+            --border-color: #333;
+            --text-color: #e0e0e0;
+            --accent-busy: #ff4757;
+            --accent-idle: #2ed573;
+            --accent-meeting: #ffa502;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        header {
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* 办公室平面大厅 */
+        .office-floor {
+            display: grid;
+            grid-template-columns: 3fr 1fr;
+            gap: 20px;
+            min-height: 70vh;
+        }
+
+        /* 工作区格子间 */
+        .work-zone {
+            border: 2px dashed var(--border-color);
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 15px;
+            align-content: start;
+        }
+
+        /* 会议室区域 */
+        .meeting-zone {
+            border: 2px solid var(--accent-meeting);
+            padding: 20px;
+            background: rgba(255, 165, 2, 0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* 工位/服务器节点基础样式 */
+        .desk-node {
+            border: 2px solid var(--border-color);
+            background: #151819;
+            padding: 12px;
+            border-radius: 4px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        /* 状态衍生样式 */
+        .desk-node.busy { border-color: var(--accent-busy); }
+        .desk-node.busy .status-dot { background-color: var(--accent-busy); box-shadow: 0 0 8px var(--accent-busy); }
+
+        .desk-node.idle { border-color: var(--accent-idle); }
+        .desk-node.idle .status-dot { background-color: var(--accent-idle); }
+
+        .desk-node.meeting { border-color: var(--accent-meeting); }
+
+        /* 节点内部元素 */
+        .node-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #555;
+        }
+
+        .avatar-status {
+            font-size: 24px;
+            text-align: center;
+            margin: 10px 0;
+            min-height: 35px;
+        }
+
+        .metrics {
+            font-size: 11px;
+            color: #888;
+        }
+
+        .progressbar {
+            background: #222;
+            height: 4px;
+            margin-top: 5px;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #555;
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+        .busy .progress-fill { background: var(--accent-busy); }
+        .idle .progress-fill { background: var(--accent-idle); }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div>
+            <h1 style="margin:0; font-size: 20px;">🏢 虚拟办公室运维大屏 (Office-Ops Cluster)</h1>
+            <span style="font-size: 12px; color: #666;">Data Mode: Telemetry Streaming</span>
+        </div>
+        <div id="global-stats">加载中...</div>
+    </header>
+
+    <main class="office-floor">
+        <div class="work-zone" id="work-zone-floor">
+            </div>
+
+        <div class="meeting-zone" id="meeting-room-floor">
+            <h3 style="margin: 0 0 10px 0; color: var(--accent-meeting); font-size: 14px;">🤝 1号会议室 (Cluster-01 Sync)</h3>
+            </div>
+    </main>
+
+    <script>
+        /**
+         * 模拟数据通道与接口注册
+         * 实际生产中，由后文提供的 JS 接口和 WebSocket 驱动
+         */
+
+        // 伪造初始化数据
+        const mockDevices = [
+            { id: "node-01", name: "DEV-WORKSTATION-A", type: "pc", cpu: 88, memory: 70, status: "busy", label: "疯狂敲键盘" },
+            { id: "node-02", name: "PROD-PHP-SERVER", type: "server", cpu: 12, memory: 45, status: "idle", label: "悠闲喝茶" },
+            { id: "node-03", name: "AI-TRAIN-NODE-01", type: "gpu", cpu: 95, memory: 90, status: "busy", label: "CPU冒烟中" },
+            { id: "node-04", name: "CACHE-REDIS-01", type: "server", cpu: 15, memory: 80, status: "idle", label: "闭目养神" },
+            { id: "node-05", name: "GATEWAY-NGINX", type: "server", cpu: 55, memory: 30, status: "meeting", label: "会议讨论中" },
+            { id: "node-06", name: "AUTH-SERVICE", type: "server", cpu: 60, memory: 35, status: "meeting", label: "会议讨论中" }
+        ];
+
+        // 渲染引擎
+        function renderOffice(devices) {
+            const workZone = document.getElementById('work-zone-floor');
+            const meetingZone = document.getElementById('meeting-room-floor');
+
+            // 清空旧节点（保留会议室标题）
+            workZone.innerHTML = '';
+            const title = meetingZone.querySelector('h3');
+            meetingZone.innerHTML = '';
+            meetingZone.appendChild(title);
+
+            let busyCount = 0;
+
+            devices.forEach(dev => {
+                const nodeHtml = `
+                    <div class="desk-node ${dev.status}" id="${dev.id}">
+                        <div class="node-header">
+                            <span style="font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:120px;">${dev.name}</span>
+                            <div class="status-dot"></div>
+                        </div>
+                        <div class="avatar-status">
+                            ${dev.status === 'busy' ? '👨‍💻🔥' : dev.status === 'idle' ? '☕️🍵' : '🗣️💬'}
+                        </div>
+                        <div style="font-size: 11px; text-align:center; margin-bottom: 8px; color: #aaa;">${dev.label}</div>
+                        <div class="metrics">
+                            <div>CPU: ${dev.cpu}%</div>
+                            <div class="progressbar"><div class="progress-fill" style="width: ${dev.cpu}%"></div></div>
+                        </div>
+                    </div>
+                `;
+
+                if (dev.status === 'busy') busyCount++;
+
+                // 场景分流：会议状态进入会议室，其余留在办公区
+                if (dev.status === 'meeting') {
+                    meetingZone.insertAdjacentHTML('beforeend', nodeHtml);
+                } else {
+                    workZone.insertAdjacentHTML('beforeend', nodeHtml);
+                }
+            });
+
+            // 更新顶部全局指标
+            document.getElementById('global-stats').innerHTML = `
+                <span>Total: <b>${devices.length}</b></span> |
+                <span style="color: var(--accent-busy)">Busy: <b>${busyCount}</b></span>
+            `;
+        }
+
+        // 初次挂载
+        renderOffice(mockDevices);
+    </script>
+</body>
+</html>
