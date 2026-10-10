@@ -30,6 +30,13 @@ python3 scripts/batch_process_chat.py --help 2>/dev/null || ls template/
 
 公开内容才进本仓；私密会话请另建 knowledge-private。
 
+
+## 冒烟自检
+
+```bash
+bash scripts/smoke.sh
+```
+
 ## 定制合作（可报价）
 
 - 团队知识库规范 + 私有托管  

@@ -19,3 +19,7 @@ config.local
 
 # 图片缓存/大文件（按需）
 # 不忽略正常图片，只忽略临时截图缓存
+.env.*
+!.env.example
+__pycache__/
+*.pyc
